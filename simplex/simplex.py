@@ -7,139 +7,139 @@ import numpy as np
 import pandas as pd
 
 
-class SimplexError(Exception):
+class ErrorSimplex(Exception):
     """Error comprensible producido al construir o ejecutar el modelo."""
 
 
 @dataclass
-class Iteration:
-    number: int
-    tableau: pd.DataFrame
-    entering: Optional[str] = None
-    leaving: Optional[str] = None
-    ratios: Optional[List[Optional[float]]] = None
-    pivot_column: Optional[int] = None
-    pivot_row: Optional[int] = None
-    pivot_element: Optional[float] = None
-    explanation: str = ""
+class Iteracion:
+    numero: int
+    tabla: pd.DataFrame
+    entrante: Optional[str] = None
+    saliente: Optional[str] = None
+    razones: Optional[List[Optional[float]]] = None
+    columna_pivote: Optional[int] = None
+    fila_pivote: Optional[int] = None
+    elemento_pivote: Optional[float] = None
+    explicacion: str = ""
 
 
-class SimplexSolver:
+class SolucionadorSimplex:
     """Simplex tabular para maximizacion con restricciones <= y b >= 0."""
 
-    def __init__(self, objective: List[float], constraints: List[List[float]],
-                 rhs: List[float], variable_names: Optional[List[str]] = None):
-        self.objective = np.array(objective, dtype=float)
-        self.constraints = np.array(constraints, dtype=float)
-        self.rhs = np.array(rhs, dtype=float)
-        self.variable_names = variable_names or [
-            f"x{i + 1}" for i in range(len(objective))
+    def __init__(self, funcion_objetivo: List[float], restricciones: List[List[float]],
+                 terminos_independientes: List[float], nombres_variables: Optional[List[str]] = None):
+        self.funcion_objetivo = np.array(funcion_objetivo, dtype=float)
+        self.restricciones = np.array(restricciones, dtype=float)
+        self.terminos_independientes = np.array(terminos_independientes, dtype=float)
+        self.nombres_variables = nombres_variables or [
+            f"x{i + 1}" for i in range(len(funcion_objetivo))
         ]
-        self.tolerance = 1e-9
-        self.iterations: List[Iteration] = []
-        self.status = "not_started"
-        self.solution = {}
-        self.optimal_value = 0.0
+        self.tolerancia = 1e-9
+        self.iteraciones: List[Iteracion] = []
+        self.estado = "no_iniciado"
+        self.solucion = {}
+        self.valor_optimo = 0.0
 
-        if self.constraints.ndim != 2 or len(self.constraints) == 0:
-            raise SimplexError("Debe existir al menos una restriccion.")
-        if self.constraints.shape[1] != len(self.objective):
-            raise SimplexError("Las restricciones no coinciden con las variables.")
-        if len(self.rhs) != len(self.constraints):
-            raise SimplexError("Cada restriccion debe tener un termino independiente.")
-        if np.any(self.rhs < -self.tolerance):
-            raise SimplexError(
+        if self.restricciones.ndim != 2 or len(self.restricciones) == 0:
+            raise ErrorSimplex("Debe existir al menos una restriccion.")
+        if self.restricciones.shape[1] != len(self.funcion_objetivo):
+            raise ErrorSimplex("Las restricciones no coinciden con las variables.")
+        if len(self.terminos_independientes) != len(self.restricciones):
+            raise ErrorSimplex("Cada restriccion debe tener un termino independiente.")
+        if np.any(self.terminos_independientes < -self.tolerancia):
+            raise ErrorSimplex(
                 "El termino independiente no puede ser negativo para esta version "
                 "del metodo Simplex."
             )
 
-        self.slack_names = [f"s{i + 1}" for i in range(len(self.rhs))]
-        self.column_names = self.variable_names + self.slack_names
-        self.tableau = np.zeros(
-            (len(self.rhs) + 1, len(self.column_names) + 1), dtype=float
+        self.nombres_holgura = [f"s{i + 1}" for i in range(len(self.terminos_independientes))]
+        self.nombres_columnas = self.nombres_variables + self.nombres_holgura
+        self.tabla = np.zeros(
+            (len(self.terminos_independientes) + 1, len(self.nombres_columnas) + 1), dtype=float
         )
-        self.tableau[:-1, :len(self.column_names)] = np.hstack(
-            (self.constraints, np.eye(len(self.rhs)))
+        self.tabla[:-1, :len(self.nombres_columnas)] = np.hstack(
+            (self.restricciones, np.eye(len(self.terminos_independientes)))
         )
-        self.tableau[:-1, -1] = self.rhs
-        self.tableau[-1, :len(self.objective)] = -self.objective
-        self.basic_variables = self.slack_names.copy()
+        self.tabla[:-1, -1] = self.terminos_independientes
+        self.tabla[-1, :len(self.funcion_objetivo)] = -self.funcion_objetivo
+        self.variables_basicas = self.nombres_holgura.copy()
 
-    def _dataframe(self) -> pd.DataFrame:
-        labels = self.basic_variables + ["Z"]
+    def _construir_dataframe(self) -> pd.DataFrame:
+        etiquetas = self.variables_basicas + ["Z"]
         return pd.DataFrame(
-            np.round(self.tableau, 10),
-            index=labels,
-            columns=self.column_names + ["RHS"],
+            np.round(self.tabla, 10),
+            index=etiquetas,
+            columns=self.nombres_columnas + ["RHS"],
         )
 
-    def solve(self, max_iterations: int = 100) -> List[Iteration]:
+    def resolver(self, maximo_iteraciones: int = 100) -> List[Iteracion]:
         """Ejecuta Simplex y conserva la tabla antes y despues de cada pivote."""
-        self.iterations = [Iteration(0, self._dataframe(), explanation="Tabla inicial.")]
+        self.iteraciones = [Iteracion(0, self._construir_dataframe(), explicacion="Tabla inicial.")]
 
-        for number in range(1, max_iterations + 1):
-            objective_row = self.tableau[-1, :-1]
-            entering_index = int(np.argmin(objective_row))
-            if objective_row[entering_index] >= -self.tolerance:
-                self.status = "optimal"
-                self._build_solution()
-                self.iterations[-1].explanation = "Se ha encontrado la solucion optima."
-                return self.iterations
+        for numero in range(1, maximo_iteraciones + 1):
+            fila_objetivo = self.tabla[-1, :-1]
+            indice_entrante = int(np.argmin(fila_objetivo))
+            if fila_objetivo[indice_entrante] >= -self.tolerancia:
+                self.estado = "optimo"
+                self._construir_solucion()
+                self.iteraciones[-1].explicacion = "Se ha encontrado la solucion optima."
+                return self.iteraciones
 
-            column = self.tableau[:-1, entering_index]
-            ratios: List[Optional[float]] = []
-            valid_rows = []
-            for row, coefficient in enumerate(column):
-                if coefficient > self.tolerance:
-                    ratios.append(float(self.tableau[row, -1] / coefficient))
-                    valid_rows.append(row)
+            columna = self.tabla[:-1, indice_entrante]
+            razones: List[Optional[float]] = []
+            filas_validas = []
+            for fila, coeficiente in enumerate(columna):
+                if coeficiente > self.tolerancia:
+                    razones.append(float(self.tabla[fila, -1] / coeficiente))
+                    filas_validas.append(fila)
                 else:
-                    ratios.append(None)
-            if not valid_rows:
-                self.status = "unbounded"
-                raise SimplexError(
+                    razones.append(None)
+            if not filas_validas:
+                self.estado = "no_acotado"
+                raise ErrorSimplex(
                     f"El problema no esta acotado: no hay variable saliente para "
-                    f"{self.column_names[entering_index]}."
+                    f"{self.nombres_columnas[indice_entrante]}."
                 )
 
-            leaving_row = min(valid_rows, key=lambda row: ratios[row])
-            pivot = self.tableau[leaving_row, entering_index]
-            if abs(pivot) <= self.tolerance:
-                self.status = "invalid"
-                raise SimplexError("El elemento pivote es cero o invalido.")
+            fila_saliente = min(filas_validas, key=lambda fila: razones[fila])
+            pivote = self.tabla[fila_saliente, indice_entrante]
+            if abs(pivote) <= self.tolerancia:
+                self.estado = "invalido"
+                raise ErrorSimplex("El elemento pivote es cero o invalido.")
 
-            entering = self.column_names[entering_index]
-            leaving = self.basic_variables[leaving_row]
-            current = self.iterations[-1]
-            current.entering = entering
-            current.leaving = leaving
-            current.ratios = ratios
-            current.pivot_column = entering_index
-            current.pivot_row = leaving_row
-            current.pivot_element = float(pivot)
-            current.explanation = (
-                f"Entra {entering}; sale {leaving}. "
-                f"Se divide la fila pivote entre {pivot:.6g} y se hacen ceros "
+            entrante = self.nombres_columnas[indice_entrante]
+            saliente = self.variables_basicas[fila_saliente]
+            actual = self.iteraciones[-1]
+            actual.entrante = entrante
+            actual.saliente = saliente
+            actual.razones = razones
+            actual.columna_pivote = indice_entrante
+            actual.fila_pivote = fila_saliente
+            actual.elemento_pivote = float(pivote)
+            actual.explicacion = (
+                f"Entra {entrante}; sale {saliente}. "
+                f"Se divide la fila pivote entre {pivote:.6g} y se hacen ceros "
                 "en el resto de la columna."
             )
 
-            self.tableau[leaving_row] /= pivot
-            for row in range(len(self.tableau)):
-                if row != leaving_row:
-                    self.tableau[row] -= (
-                        self.tableau[row, entering_index]
-                        * self.tableau[leaving_row]
+            self.tabla[fila_saliente] /= pivote
+            for fila in range(len(self.tabla)):
+                if fila != fila_saliente:
+                    self.tabla[fila] -= (
+                        self.tabla[fila, indice_entrante]
+                        * self.tabla[fila_saliente]
                     )
-            self.tableau[np.abs(self.tableau) < self.tolerance] = 0
-            self.basic_variables[leaving_row] = entering
-            self.iterations.append(Iteration(number, self._dataframe()))
+            self.tabla[np.abs(self.tabla) < self.tolerancia] = 0
+            self.variables_basicas[fila_saliente] = entrante
+            self.iteraciones.append(Iteracion(numero, self._construir_dataframe()))
 
-        self.status = "limit"
-        raise SimplexError("Se alcanzo el limite de iteraciones sin hallar el optimo.")
+        self.estado = "limite"
+        raise ErrorSimplex("Se alcanzo el limite de iteraciones sin hallar el optimo.")
 
-    def _build_solution(self) -> None:
-        values = {name: 0.0 for name in self.column_names}
-        for row, variable in enumerate(self.basic_variables):
-            values[variable] = float(self.tableau[row, -1])
-        self.solution = {name: values[name] for name in self.variable_names}
-        self.optimal_value = float(self.tableau[-1, -1])
+    def _construir_solucion(self) -> None:
+        valores = {nombre: 0.0 for nombre in self.nombres_columnas}
+        for fila, variable in enumerate(self.variables_basicas):
+            valores[variable] = float(self.tabla[fila, -1])
+        self.solucion = {nombre: valores[nombre] for nombre in self.nombres_variables}
+        self.valor_optimo = float(self.tabla[-1, -1])

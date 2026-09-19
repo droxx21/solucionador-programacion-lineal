@@ -2,10 +2,10 @@
 
 Etapa 1 de la integración: este main.py todavía no fusiona ambas
 interfaces gráficas en una sola ventana (eso requiere adaptar
-SimplexApp para que deje de heredar de tk.Tk, lo cual se abordará en
-una etapa posterior). Por ahora ofrece un menú de selección que lanza
-cada método en su propia ventana, sin modificar su lógica ni su
-comportamiento actual.
+AplicacionSimplex para que deje de heredar de tk.Tk, lo cual se
+abordará en una etapa posterior). Por ahora ofrece un menú de
+selección que lanza cada método en su propia ventana, sin modificar
+su lógica ni su comportamiento actual.
 """
 
 import tkinter as tk
@@ -22,9 +22,9 @@ def abrir_metodo_grafico():
 
 def abrir_metodo_simplex():
     """Lanza el módulo del método simplex en su propia ventana."""
-    from simplex.interfaz import SimplexApp
+    from simplex.interfaz import AplicacionSimplex
 
-    SimplexApp().mainloop()
+    AplicacionSimplex().mainloop()
 
 
 def crear_menu_principal():
