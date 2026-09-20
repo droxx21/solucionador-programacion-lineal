@@ -12,6 +12,17 @@ import tkinter as tk
 from tkinter import ttk
 
 
+def abrir_entrada_comun():
+    """Lanza el formulario común de entrada (recomendado)."""
+    from entrada.interfaz import crear_aplicacion
+
+    ventana = tk.Toplevel()
+    ventana.title("Entrada Común de Problema")
+    ventana.geometry("900x800")
+    ventana.minsize(800, 700)
+    crear_aplicacion(ventana)
+
+
 def abrir_metodo_grafico():
     """Lanza el módulo del método gráfico en su propia ventana."""
     from grafico.interfaz import crear_aplicacion
@@ -30,8 +41,8 @@ def abrir_metodo_simplex():
 def crear_menu_principal():
     root = tk.Tk()
     root.title("Programación Lineal - Menú Principal")
-    root.geometry("420x220")
-    root.minsize(380, 200)
+    root.geometry("440x340")
+    root.minsize(400, 320)
 
     contenedor = ttk.Frame(root, padding=20)
     contenedor.pack(fill="both", expand=True)
@@ -41,6 +52,19 @@ def crear_menu_principal():
         text="Seleccione el método a utilizar:",
         font=("TkDefaultFont", 12),
     ).pack(pady=(0, 20))
+
+    ttk.Button(
+        contenedor,
+        text="Entrada Común (recomendado)",
+        command=abrir_entrada_comun,
+    ).pack(fill="x", pady=6)
+
+    ttk.Separator(contenedor, orient="horizontal").pack(fill="x", pady=8)
+
+    ttk.Label(
+        contenedor,
+        text="O use un formulario específico de cada método:",
+    ).pack(pady=(0, 8))
 
     ttk.Button(
         contenedor,
