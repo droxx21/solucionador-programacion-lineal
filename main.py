@@ -13,7 +13,7 @@ from tkinter import ttk
 
 
 def abrir_entrada_comun():
-    """Lanza el formulario común de entrada (recomendado)."""
+    """Lanza el formulario común de entrada."""
     from entrada.interfaz import crear_aplicacion
 
     ventana = tk.Toplevel()
@@ -55,7 +55,7 @@ def crear_menu_principal():
 
     ttk.Button(
         contenedor,
-        text="Entrada Común (recomendado)",
+        text="Entrada Común",
         command=abrir_entrada_comun,
     ).pack(fill="x", pady=6)
 

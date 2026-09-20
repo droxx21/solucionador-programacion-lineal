@@ -31,7 +31,8 @@ class SolucionadorSimplex:
     """Simplex tabular para maximizacion con restricciones <= y b >= 0."""
 
     def __init__(self, funcion_objetivo: List[float], restricciones: List[List[float]],
-                 terminos_independientes: List[float], nombres_variables: Optional[List[str]] = None):
+                 terminos_independientes: List[float], nombres_variables: Optional[List[str]] = None,
+                 variables_basicas_iniciales: Optional[List[str]] = None):
         self.funcion_objetivo = np.array(funcion_objetivo, dtype=float)
         self.restricciones = np.array(restricciones, dtype=float)
         self.terminos_independientes = np.array(terminos_independientes, dtype=float)
@@ -56,17 +57,33 @@ class SolucionadorSimplex:
                 "del metodo Simplex."
             )
 
-        self.nombres_holgura = [f"s{i + 1}" for i in range(len(self.terminos_independientes))]
-        self.nombres_columnas = self.nombres_variables + self.nombres_holgura
-        self.tabla = np.zeros(
-            (len(self.terminos_independientes) + 1, len(self.nombres_columnas) + 1), dtype=float
-        )
-        self.tabla[:-1, :len(self.nombres_columnas)] = np.hstack(
-            (self.restricciones, np.eye(len(self.terminos_independientes)))
-        )
+        if variables_basicas_iniciales is None:
+            self.nombres_holgura = [f"s{i + 1}" for i in range(len(self.terminos_independientes))]
+            self.nombres_columnas = self.nombres_variables + self.nombres_holgura
+            self.tabla = np.zeros(
+                (len(self.terminos_independientes) + 1, len(self.nombres_columnas) + 1), dtype=float
+            )
+            self.tabla[:-1, :len(self.nombres_columnas)] = np.hstack(
+                (self.restricciones, np.eye(len(self.terminos_independientes)))
+            )
+            self.variables_basicas = self.nombres_holgura.copy()
+        else:
+            if len(variables_basicas_iniciales) != len(self.terminos_independientes):
+                raise ErrorSimplex("La base inicial no coincide con la cantidad de restricciones.")
+            self.variables_basicas = list(variables_basicas_iniciales)
+            self.nombres_columnas = list(self.nombres_variables)
+            self.tabla = np.zeros(
+                (len(self.terminos_independientes) + 1, len(self.nombres_columnas) + 1), dtype=float
+            )
+            if self.restricciones.shape[1] != len(self.nombres_columnas):
+                raise ErrorSimplex("Las restricciones no coinciden con las variables de la base inicial.")
+            self.tabla[:-1, :len(self.nombres_columnas)] = self.restricciones
+            self.nombres_holgura = [
+                nombre for nombre in self.variables_basicas if nombre.startswith("s")
+            ]
+
         self.tabla[:-1, -1] = self.terminos_independientes
         self.tabla[-1, :len(self.funcion_objetivo)] = -self.funcion_objetivo
-        self.variables_basicas = self.nombres_holgura.copy()
         # `self.tabla` se modifica al iterar; se conserva la inicial para poder
         # describir el modelo que realmente se cargo en la tabla.
         self.tabla_inicial = self.tabla.copy()

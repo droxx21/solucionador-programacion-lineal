@@ -22,6 +22,8 @@ from grafico.adaptador import (
 from grafico.grafico import crear_grafica
 from grafico.modelo import resolver_modelo
 from grafico.presentacion import filas_evaluacion
+from gran_m.adaptador import ErrorAdaptadorGranM, problema_a_solucionador_gran_m
+from gran_m.gran_m import ErrorGranM
 from simplex.adaptador import ErrorAdaptadorSimplex, problema_a_solucionador_simplex
 from simplex.simplex import ErrorSimplex
 from simplex.utilidades import formatear_iteracion
@@ -138,6 +140,9 @@ class AplicacionEntradaComun(ttk.Frame):
         self.etiqueta_aviso_grafico.pack(anchor="w", padx=(20, 0))
 
         ttk.Radiobutton(panel, text="Método Simplex", value="simplex", variable=self.metodo).pack(
+            anchor="w", pady=(6, 0)
+        )
+        ttk.Radiobutton(panel, text="Método Gran M", value="gran_m", variable=self.metodo).pack(
             anchor="w", pady=(6, 0)
         )
 
@@ -275,6 +280,8 @@ class AplicacionEntradaComun(ttk.Frame):
 
         if self.metodo.get() == "grafico":
             self._resolver_con_grafico(problema)
+        elif self.metodo.get() == "gran_m":
+            self._resolver_con_gran_m(problema)
         else:
             self._resolver_con_simplex(problema)
 
@@ -362,6 +369,31 @@ class AplicacionEntradaComun(ttk.Frame):
             texto_salida.insert("end", f"{nombre} = {formatear_numero(valor)}\n")
         texto_salida.insert("end", f"Z = {formatear_numero(solucionador.valor_optimo)}\n")
 
+        texto_salida.config(state="disabled")
+
+    def _resolver_con_gran_m(self, problema: Problema):
+        try:
+            solucionador = problema_a_solucionador_gran_m(problema)
+            iteraciones = solucionador.resolver()
+        except (ErrorAdaptadorGranM, ErrorGranM, ErrorSimplex) as exc:
+            messagebox.showerror("No se puede resolver", str(exc))
+            return
+
+        ventana = tk.Toplevel(self)
+        ventana.title("Resultado - Método Gran M")
+        ventana.geometry("850x650")
+
+        texto_salida = tk.Text(ventana, wrap="none", font=("Courier New", 9))
+        texto_salida.pack(fill="both", expand=True, padx=8, pady=8)
+
+        texto_salida.insert("end", f"Modelo transformado con Gran M:\n{solucionador.modelo_estandar_texto()}\n\n")
+        for item in iteraciones:
+            texto_salida.insert("end", formatear_iteracion(item))
+
+        texto_salida.insert("end", "\nSolución óptima:\n")
+        for nombre, valor in solucionador.solucion.items():
+            texto_salida.insert("end", f"{nombre} = {formatear_numero(valor)}\n")
+        texto_salida.insert("end", f"Z = {formatear_numero(solucionador.valor_optimo)}\n")
         texto_salida.config(state="disabled")
 
 

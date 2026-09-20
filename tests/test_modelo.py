@@ -2,6 +2,7 @@ from core.modelo import TipoObjetivo
 from core.numeros import analizar_numero
 from core.validacion import ErrorModelo, construir_problema, construir_restriccion
 from grafico.adaptador import ErrorAdaptadorGrafico, problema_a_modelo_grafico
+from gran_m.adaptador import ErrorAdaptadorGranM, problema_a_solucionador_gran_m
 from simplex.adaptador import ErrorAdaptadorSimplex, problema_a_solucionador_simplex
 
 
@@ -96,6 +97,25 @@ def probar_adaptador_simplex_rechaza_restriccion_mayor_igual():
         return True
 
 
+def probar_adaptador_gran_m_resuelve_minimizacion():
+    r1 = construir_restriccion(["1", "1"], ">=", "4", 2, etiqueta="R1")
+    r2 = construir_restriccion(["2", "1"], "=", "6", 2, etiqueta="R2")
+    problema = construir_problema("Minimizar", ["x1", "x2"], ["3", "2"], [r1, r2])
+    solucionador = problema_a_solucionador_gran_m(problema, 1000.0)
+    solucionador.resolver()
+    return abs(solucionador.valor_optimo - 10.0) <= 1e-6
+
+
+def probar_adaptador_gran_m_rechaza_rhs_negativo():
+    r1 = construir_restriccion(["1", "1"], "<=", "-4", 2, etiqueta="R1")
+    problema = construir_problema("Maximizar", ["x1", "x2"], ["1", "1"], [r1])
+    try:
+        problema_a_solucionador_gran_m(problema)
+        return False
+    except ErrorAdaptadorGranM:
+        return True
+
+
 if __name__ == "__main__":
     pruebas = [
         ("Prueba 1: analizar_numero decimal y coma", probar_analizar_numero_decimal_y_coma),
@@ -109,6 +129,8 @@ if __name__ == "__main__":
         ("Prueba 9: adaptador simplex resuelve maximización", probar_adaptador_simplex_resuelve_maximizacion),
         ("Prueba 10: adaptador simplex rechaza minimización", probar_adaptador_simplex_rechaza_minimizacion),
         ("Prueba 11: adaptador simplex rechaza restricción >=", probar_adaptador_simplex_rechaza_restriccion_mayor_igual),
+        ("Prueba 12: adaptador gran m resuelve minimización", probar_adaptador_gran_m_resuelve_minimizacion),
+        ("Prueba 13: adaptador gran m rechaza RHS negativo", probar_adaptador_gran_m_rechaza_rhs_negativo),
     ]
 
     for nombre, prueba in pruebas:
