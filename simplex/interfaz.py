@@ -4,8 +4,9 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from typing import List
 
+from core.numeros import formatear_numero
 from simplex.simplex import ErrorSimplex, SolucionadorSimplex
-from simplex.utilidades import analizar_numero, expresion, formatear_numero
+from simplex.utilidades import analizar_numero, formatear_iteracion
 
 
 class AplicacionSimplex(tk.Tk):
@@ -124,18 +125,11 @@ class AplicacionSimplex(tk.Tk):
             num_variables, funcion_objetivo, restricciones, terminos_independientes = self._leer_modelo()
             solucionador = SolucionadorSimplex(funcion_objetivo, restricciones, terminos_independientes, [f"x{i + 1}" for i in range(num_variables)])
             self.texto_forma_estandar.delete("1.0", "end")
-            self.texto_forma_estandar.insert("end", f"Max Z = {expresion(solucionador.nombres_variables, funcion_objetivo)}\n")
-            for i, (coeficientes, valor) in enumerate(zip(restricciones, terminos_independientes), 1):
-                self.texto_forma_estandar.insert("end", f"{expresion(solucionador.nombres_variables, coeficientes)} + s{i} = {formatear_numero(valor)}\n")
-            self.texto_forma_estandar.insert("end", "Todas las variables son no negativas.\n")
+            self.texto_forma_estandar.insert("end", solucionador.modelo_estandar_texto() + "\n")
             iteraciones = solucionador.resolver()
             self.texto_salida.delete("1.0", "end")
             for item in iteraciones:
-                self.texto_salida.insert("end", f"ITERACION {item.numero}\n{item.tabla.to_string()}\n")
-                if item.entrante:
-                    razones_mostradas = ["-" if r is None else formatear_numero(r) for r in item.razones]
-                    self.texto_salida.insert("end", f"{item.explicacion}\nRazones: {razones_mostradas}\n")
-                    self.texto_salida.insert("end", f"Columna pivote: {item.entrante} | Fila pivote: {item.saliente} | Elemento pivote: {formatear_numero(item.elemento_pivote)}\n\n")
+                self.texto_salida.insert("end", formatear_iteracion(item))
             self.texto_solucion.delete("1.0", "end")
             self.texto_solucion.insert("end", "Se ha encontrado la solucion optima.\n")
             self.texto_solucion.insert("end", "\n".join(f"{nombre} = {formatear_numero(valor)}" for nombre, valor in solucionador.solucion.items()))

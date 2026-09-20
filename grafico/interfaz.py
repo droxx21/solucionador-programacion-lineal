@@ -1,8 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+from core.numeros import formatear_numero
 from grafico.grafico import crear_grafica
 from grafico.modelo import construir_restriccion, parsear_numero, resolver_modelo
+from grafico.presentacion import filas_evaluacion
 
 
 class AplicacionProgramacionLineal:
@@ -279,7 +281,7 @@ class AplicacionProgramacionLineal:
 
         self.actualizar_modelo(resultado["modelo_texto"])
         self.actualizar_vertices(resultado["vertices"])
-        self.actualizar_evaluacion(resultado["evaluaciones"])
+        self.actualizar_evaluacion(resultado["vertices"], resultado["evaluaciones"])
         self.actualizar_solucion(resultado["optimo"])
 
         if self.canvas_grafica is not None:
@@ -297,22 +299,22 @@ class AplicacionProgramacionLineal:
             self.tree_vertices.delete(fila)
 
         for idx, (x, y) in enumerate(vertices, start=1):
-            self.tree_vertices.insert("", "end", values=(f"V{idx}", f"{x:.2f}", f"{y:.2f}"))
+            self.tree_vertices.insert("", "end", values=(f"V{idx}", formatear_numero(x), formatear_numero(y)))
 
-    def actualizar_evaluacion(self, evaluaciones):
+    def actualizar_evaluacion(self, vertices, evaluaciones):
         for fila in self.tree_evaluacion.get_children():
             self.tree_evaluacion.delete(fila)
 
-        for item in evaluaciones:
-            self.tree_evaluacion.insert("", "end", values=(item["vertice"], f"{item['x']:.2f}", f"{item['y']:.2f}", f"{item['z']:.2f}"))
+        for fila in filas_evaluacion(vertices, evaluaciones):
+            self.tree_evaluacion.insert("", "end", values=fila)
 
     def actualizar_solucion(self, optimo):
         self.etiqueta_optimo.config(
             text=(
                 f"Óptimo en el vértice: {optimo['vertice']}\n\n"
-                f"x = {optimo['x']:.2f}\n"
-                f"y = {optimo['y']:.2f}\n\n"
-                f"Valor óptimo:\nZ = {optimo['z']:.2f}"
+                f"x = {formatear_numero(optimo['x'])}\n"
+                f"y = {formatear_numero(optimo['y'])}\n\n"
+                f"Valor óptimo:\nZ = {formatear_numero(optimo['z'])}"
             )
         )
 

@@ -21,8 +21,10 @@ from grafico.adaptador import (
 )
 from grafico.grafico import crear_grafica
 from grafico.modelo import resolver_modelo
+from grafico.presentacion import filas_evaluacion
 from simplex.adaptador import ErrorAdaptadorSimplex, problema_a_solucionador_simplex
 from simplex.simplex import ErrorSimplex
+from simplex.utilidades import formatear_iteracion
 
 
 class AplicacionEntradaComun(ttk.Frame):
@@ -286,20 +288,53 @@ class AplicacionEntradaComun(ttk.Frame):
 
         ventana = tk.Toplevel(self)
         ventana.title("Resultado - Método Gráfico")
-        ventana.geometry("900x750")
+        ventana.geometry("900x900")
+
+        # El resumen y la tabla se empaquetan primero, abajo, para que la gráfica
+        # (que se expande) nunca los desplace fuera de la ventana.
+        panel_texto = ttk.Frame(ventana)
+        panel_texto.pack(side="bottom", fill="x", padx=8, pady=(0, 8))
+
+        panel_evaluacion = ttk.LabelFrame(
+            ventana, text="Evaluación de la función objetivo en los vértices", padding=6
+        )
+        panel_evaluacion.pack(side="bottom", fill="x", padx=8, pady=(0, 8))
+        self._crear_tabla_evaluacion(panel_evaluacion, problema.nombres_variables, resultado)
 
         panel_grafica = ttk.Frame(ventana)
         panel_grafica.pack(fill="both", expand=True, padx=8, pady=8)
         crear_grafica(panel_grafica, restricciones, resultado["vertices"], resultado["optimo"])
 
-        panel_texto = ttk.Frame(ventana)
-        panel_texto.pack(fill="x", padx=8, pady=(0, 8))
         optimo = resultado["optimo"]
         texto = (
             f"Óptimo en {optimo['vertice']}: x1 = {formatear_numero(optimo['x'])}, "
             f"x2 = {formatear_numero(optimo['y'])}, Z = {formatear_numero(optimo['z'])}"
         )
         ttk.Label(panel_texto, text=texto, font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
+
+    def _crear_tabla_evaluacion(self, padre, nombres_variables, resultado):
+        """Tabla con las coordenadas de cada vértice y el valor de Z en él."""
+        filas = filas_evaluacion(resultado["vertices"], resultado["evaluaciones"])
+        filas_visibles = 8
+
+        tabla = ttk.Treeview(
+            padre,
+            columns=("vertice", "x", "y", "z"),
+            show="headings",
+            height=min(max(len(filas), 1), filas_visibles),
+        )
+        encabezados = ("Vértice", *nombres_variables, "Z")
+        for columna, encabezado in zip(("vertice", "x", "y", "z"), encabezados):
+            tabla.heading(columna, text=encabezado)
+            tabla.column(columna, width=120, anchor="center")
+        for fila in filas:
+            tabla.insert("", "end", values=fila)
+
+        tabla.pack(side="left", fill="x", expand=True)
+        if len(filas) > filas_visibles:
+            barra = ttk.Scrollbar(padre, orient="vertical", command=tabla.yview)
+            tabla.configure(yscrollcommand=barra.set)
+            barra.pack(side="right", fill="y")
 
     def _resolver_con_simplex(self, problema: Problema):
         try:
@@ -316,10 +351,11 @@ class AplicacionEntradaComun(ttk.Frame):
         texto_salida = tk.Text(ventana, wrap="none", font=("Courier New", 9))
         texto_salida.pack(fill="both", expand=True, padx=8, pady=8)
 
+        texto_salida.insert(
+            "end", f"Modelo con variables de holgura:\n{solucionador.modelo_estandar_texto()}\n\n"
+        )
         for item in iteraciones:
-            texto_salida.insert("end", f"ITERACION {item.numero}\n{item.tabla.to_string()}\n")
-            if item.entrante:
-                texto_salida.insert("end", f"{item.explicacion}\n\n")
+            texto_salida.insert("end", formatear_iteracion(item))
 
         texto_salida.insert("end", "\nSolución óptima:\n")
         for nombre, valor in solucionador.solucion.items():

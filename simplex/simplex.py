@@ -6,6 +6,9 @@ from typing import List, Optional
 import numpy as np
 import pandas as pd
 
+from core.numeros import formatear_numero
+from simplex.utilidades import expresion
+
 
 class ErrorSimplex(Exception):
     """Error comprensible producido al construir o ejecutar el modelo."""
@@ -64,6 +67,9 @@ class SolucionadorSimplex:
         self.tabla[:-1, -1] = self.terminos_independientes
         self.tabla[-1, :len(self.funcion_objetivo)] = -self.funcion_objetivo
         self.variables_basicas = self.nombres_holgura.copy()
+        # `self.tabla` se modifica al iterar; se conserva la inicial para poder
+        # describir el modelo que realmente se cargo en la tabla.
+        self.tabla_inicial = self.tabla.copy()
 
     def _construir_dataframe(self) -> pd.DataFrame:
         etiquetas = self.variables_basicas + ["Z"]
@@ -72,6 +78,23 @@ class SolucionadorSimplex:
             index=etiquetas,
             columns=self.nombres_columnas + ["RHS"],
         )
+
+    def modelo_estandar_texto(self) -> str:
+        """Modelo con variables de holgura, leido de la tabla inicial.
+
+        Se obtiene de la misma tabla con la que arranca el algoritmo (columnas
+        `nombres_columnas`, incluidas las holguras), de modo que no puede
+        divergir de lo que Simplex esta usando. La fila Z de la tabla guarda
+        los coeficientes de la funcion objetivo con signo cambiado.
+        """
+        tabla = self.tabla_inicial
+        lineas = [f"Max Z = {expresion(self.nombres_columnas, -tabla[-1, :-1])}"]
+        for fila in tabla[:-1]:
+            lineas.append(
+                f"{expresion(self.nombres_columnas, fila[:-1])} = {formatear_numero(fila[-1])}"
+            )
+        lineas.append(f"{', '.join(self.nombres_columnas)} >= 0")
+        return "\n".join(lineas)
 
     def resolver(self, maximo_iteraciones: int = 100) -> List[Iteracion]:
         """Ejecuta Simplex y conserva la tabla antes y despues de cada pivote."""
